@@ -1,0 +1,18 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+
+# 古いファイル
+*.old
+*.bak
+
+# その他
+.DS_Store
+*.log
+tf.txt
+yaml.txt
