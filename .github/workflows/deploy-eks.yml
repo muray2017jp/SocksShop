@@ -1,0 +1,41 @@
+name: Deploy to EKS
+
+on:
+  workflow_run:
+    workflows: ["Docker Build & Push to ECR"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig             --region ${{ secrets.AWS_REGION }}             --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to EKS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          kubectl set image deployment/front-end             front-end=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG             -n sock-shop
+          kubectl rollout status deployment/front-end -n sock-shop --timeout=5m
