@@ -22,10 +22,11 @@
       send(ret);
   };
 
-  helpers.sessionMiddleware = function(err, req, res, next) {
-    if(!req.cookies.logged_in) {
-      res.session.customerId = null;
+  helpers.sessionMiddleware = function(req, res, next) {
+    if (req.cookies.logged_in && req.session) {
+      req.session.customerId = req.cookies.logged_in;
     }
+    next();
   };
 
   /* Responds with the given body and status 200 OK  */
