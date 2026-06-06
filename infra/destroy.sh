@@ -139,13 +139,16 @@ else
   echo "NATゲートウェイなし"
 fi
 
-echo "=== [Phase4.5] EIP残存チェック ==="
-EIP_IDS=$(aws ec2 describe-addresses --region ${REGION} \
-  --query "Addresses[*].AllocationId" --output text 2>/dev/null || true)
+echo "=== [Phase4.5] EIP残存チェック (jyouhou.net タグのEIPは除外) ==="
+EIP_IDS=$(aws ec2 describe-addresses --region ${REGION}   --query "Addresses[*].AllocationId" --output text 2>/dev/null || true)
 if [ -n "${EIP_IDS}" ]; then
   for eip in ${EIP_IDS}; do
-    aws ec2 release-address --allocation-id ${eip} --region ${REGION} 2>/dev/null \
-      && echo "  EIP解放: ${eip}" || echo "  EIP解放スキップ: ${eip}"
+    TAG=$(aws ec2 describe-addresses --allocation-ids ${eip} --region ${REGION}       --query "Addresses[0].Tags[?Key==\"Name\"].Value" --output text 2>/dev/null)
+    if [ "${TAG}" = "jyouhou.net" ]; then
+      echo "  EIPスキップ（jyouhou.net）: ${eip}"
+    else
+      aws ec2 release-address --allocation-id ${eip} --region ${REGION} 2>/dev/null         && echo "  EIP解放: ${eip}" || echo "  EIP解放スキップ: ${eip}"
+    fi
   done
 else
   echo "EIPなし"
